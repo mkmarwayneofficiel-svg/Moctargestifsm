@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Gestion des Présences – Version Mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f6fa;
+        margin: 0;
+        padding: 0;
+    }
+    #tabs {
+        display: flex;
+        background: #fff;
+        box-shadow: 0 2px 5px #ccc;
+    }
+    #tabs button {
+        flex: 1;
+        padding: 12px;
+        font-size: 15px;
+        border: none;
+        background: #eee;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    #tabs button.active {
+        background: #3498db;
+        color: #fff;
+    }
+    .page {
+        display: none;
+        padding: 15px;
+    }
+    .activePage {
+        display: block;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    #panel {
+        background: white;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: 0 0 5px #ccc;
+        margin-bottom: 12px;
+    }
+    label {
+        font-weight: bold;
+        display: block;
+        margin-top: 8px;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin-top: 6px;
+        box-sizing: border-box;
+    }
+    button {
+        padding: 10px;
+        margin-top: 8px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .btn-green { background: #4CAF50; color: white; }
+    .btn-blue { background: #3498db; color: white; }
+    .btn-red { background: #e74c3c; color: white; }
+    .btn-gray { background: #555; color: white; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 0 5px #ccc;
+        margin-bottom: 12px;
+    }
+    th, td {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        text-align: center;
+        vertical-align: middle;
+    }
+    th {
+        background: #f0f0f0;
+        font-size: 14px;
+    }
+    .plus-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .plus-btn:hover { background-color: #218838; }
+
+    #saved { display: none; text-align:center; margin-top:8px; color:#2ecc71; font-weight:bold; }
+
+    /* Styles spécifiques pour onglets Interro/Devoirs */
+    .small-input { width: 90px; padding:6px; border-radius:6px; }
+    .mini-btn { padding:6px 8px; font-size:13px; border-radius:6px; }
+
+    /* Résumé */
+    .block { margin-bottom: 10px; background:#fff;padding:10px;border-radius:8px;box-shadow:0 0 4px #ddd;}
+    .date-title { font-weight:700; margin-bottom:6px; }
+    .hour-title, .matiere { font-weight:600; margin-top:6px; }
+    .student-list { margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div id="tabs">
+    <button class="active" onclick="showPage(1)">Gestion</button>
+    <button onclick="showPage(2)">Résumé</button>
+    <button onclick="showPage(3)">Interrogations</button>
+    <button onclick="showPage(4)">Devoirs</button>
+</div>
+
+<!-- PAGE 1 : Gestion -->
+<div id="page1" class="page activePage">
+<h2>Gestion des Présences - Mobile</h2>
+
+<div id="panel">
+    <label>Matière :</label>
+    <select id="matiere">
+        <option>Maths</option>
+        <option>Français</option>
+        <option>Histoire</option>
+        <option>SVT</option>
+        <option>Anglais</option>
+        <option>Physique</option>
+    </select>
+
+    <label>Date :</label>
+    <input type="date" id="dateSel">
+
+    <label>Heure début :</label>
+    <input type="time" id="heureDebut">
+
+    <label>Heure fin :</label>
+    <input type="time" id="heureFin">
+
+    <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-blue" style="flex:1" onclick="loadAttendance()">Charger</button>
+        <button class="btn-green" style="flex:1" onclick="markAll()">Tout cocher (absents)</button>
+    </div>
+</div>
+
+<table id="studentsTable"></table>
+<div id="saved">✔ Sauvegardé</div>
+</div>
+
+<!-- PAGE 2 : Résumé -->
+<div id="page2" class="page">
+<h2>Résumé des Absences & Notes</h2>
+
+<div id="resume"></div>
+
+<hr>
+
+<h3>Tableau des Notes générales</h3>
+<table id="tableNotes" border="1" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Élève</th>
+            <th>Matière</th>
+            <th>Note</th>
+            <th>Date séance</th>
+            <th>Heure séance</th>
+            <th>Ajouté le</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<button id="downloadPDF" class="btn-blue mini-btn">Télécharger Notes (PDF)</button>
+
+<hr>
+
+<h3>Tableau Interrogations</h3>
+<table id="tableInterros" border="1" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Élève</th>
+            <th>Matière</th>
+            <th>Note</th>
+            <th>Date séance</th>
+            <th>Heure séance</th>
+            <th>Ajouté le</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<button id="downloadInterrosPDF" class="btn-blue mini-btn">Télécharger Interrogations (PDF)</button>
+
+<hr>
+
+<h3>Tableau Devoirs</h3>
+<table id="tableDevoirs" border="1" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Élève</th>
+            <th>Matière</th>
+            <th>Note</th>
+            <th>Date séance</th>
+            <th>Heure séance</th>
+            <th>Ajouté le</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<button id="downloadDevoirsPDF" class="btn-blue mini-btn">Télécharger Devoirs (PDF)</button>
+
+</div>
+
+<!-- PAGE 3 : Interrogations (Option 2 = liste complète) -->
+<div id="page3" class="page">
+<h2>Interrogations - Notes de Contrôles</h2>
+
+<div id="interroPanel" style="background:#fff;padding:10px;border-radius:8px;margin-bottom:10px;box-shadow:0 0 4px #ddd;">
+    <div style="display:flex;gap:8px;">
+        <div style="flex:1">
+            <label>Matière (texte libre)</label>
+            <input type="text" id="interroMatiere" placeholder="Ex: Maths">
+        </div>
+        <div style="width:140px">
+            <label>Date séance</label>
+            <input type="date" id="interroDate">
+        </div>
+        <div style="width:140px">
+            <label>Heure séance (début-fin)</label>
+            <input type="time" id="interroHeureDebut" placeholder="début">
+            <input type="time" id="interroHeureFin" placeholder="fin" style="margin-top:6px;">
+        </div>
+    </div>
+    <div style="margin-top:8px;">
+        <button class="btn-green" onclick="addAllInterro()">Ajouter tous remplis</button>
+        <button class="btn-blue" onclick="renderInterroList()">Rafraîchir liste</button>
+    </div>
+</div>
+
+<table id="interroList" border="1" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Élève</th>
+            <th>Note (texte libre)</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+</div>
+
+<!-- PAGE 4 : Devoirs (Option 2 = liste complète) -->
+<div id="page4" class="page">
+<h2>Devoirs - Notes des Devoirs</h2>
+
+<div id="devoirPanel" style="background:#fff;padding:10px;border-radius:8px;margin-bottom:10px;box-shadow:0 0 4px #ddd;">
+    <div style="display:flex;gap:8px;">
+        <div style="flex:1">
+            <label>Matière (texte libre)</label>
+            <input type="text" id="devoirMatiere" placeholder="Ex: Français">
+        </div>
+        <div style="width:140px">
+            <label>Date séance</label>
+            <input type="date" id="devoirDate">
+        </div>
+        <div style="width:140px">
+            <label>Heure séance (début-fin)</label>
+            <input type="time" id="devoirHeureDebut" placeholder="début">
+            <input type="time" id="devoirHeureFin" placeholder="fin" style="margin-top:6px;">
+        </div>
+    </div>
+    <div style="margin-top:8px;">
+        <button class="btn-green" onclick="addAllDevoir()">Ajouter tous remplis</button>
+        <button class="btn-blue" onclick="renderDevoirList()">Rafraîchir liste</button>
+    </div>
+</div>
+
+<table id="devoirList" border="1" style="width:100%; border-collapse:collapse;">
+    <thead>
+        <tr>
+            <th>Élève</th>
+            <th>Note (texte libre)</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+</div>
+
+<script>
+/* -------------------------
+   Initialisation / stockage
+--------------------------*/
+let defaultStudents = [
+    "Kone Moli","Aicha Bit","AGBANDAN DJO JEAN MARIE VIANNEY","ATTA Ekra Felix Boabre Karim","BAMBA Nakyata","BILEY Ehoule Joseph",
+    "BLA Koffi Christ David Nolan Mals","CISSE Begnon Rokia","COULIBALY Bamory","COLLIBALY Kafandja Fatoumats","COULIBALY Yele Korotoum",
+    "DIAKITE Alassane","DIAKITE Yassine Ben-Salla","DIALLO Abiba","DIARRA Abdoulaye","DIOMANDE Assata Roseline",
+    "DIANI Thiomoo-Kindeinin Saida","DOUMBIA Awa Noura","EBROTIE Kesse Jean Fernand","EHUI Yano- Ephraim","ETTIEN Ekissi Aymeric Canisius",
+    "FOFANA Makouny MAN KOLUNY","FOFANA Maman","FOPANA Zoumana","GOMONT Nogbou Abigael Jean-Josué","GUEIDIE Zrampica Franck Samuel",
+    "KAMAGATE Yacouba","KAMATE Aboubacar","KEITA Noura Munier Jeanne Stephanie","KINDO Tahirou","KOFFI Amenan Maric Aude",
+    "KOFFI Ngouan Jonathan Johka","KONATE Djakaridja Aziz","KONE Aminata","KONE Dognon Zakariah","KONE Moctar","KONE Yassoungo Maimouna",
+    "KOUADIO Elohim Excel Wilfried","KOUADIO Koffi Modeste","KOUADIO Ndri Salomon","KOUASSI Jean-Marc Wilfried","KOUKOUGNON Pepin Koudou Didier",
+    "KRA Aya Auriane","NANA Fatoumata","NANGO Tanoh Karim Bienvenu","N'GUESSAN Grahon Martine","OKOU Yao Patrick Wilfried",
+    "ONYEKWERE Favour Blesing Grace","QUATTARA Ibrahima Ahmed","QUATTARA Maimouna","QUATTARA N'Lodja Kindinnin","OUEDRAOGO Zakaria",
+    "OYENIRAN Fatia Aziza Salimatou","SERY Ibrahim","SILUE Kolotcholoma","SYLLA Fatoumata Zahra","SYLLA Gaoussou Abdel Aziz",
+    "THIENTA Aboudramane","TOURE Mbegnan Hermane","TOURE Zenab Fatim","TRAH Djo Eden Diplexe","YEBOUE Affouée Esther","ZAN Bi Zan Ange Antonin"
+];
+
+let classe = {
+    students: defaultStudents.slice(),
+    absences: {},
+    notes: [],      // notes générales (bouton + dans gestion)
+    interros: [],   // notes d'interrogation
+    devoirs: []     // notes de devoir
+};
+
+let saved = localStorage.getItem("classData_mobile_v2");
+if (saved) {
+    try {
+        let parsed = JSON.parse(saved);
+        // fusion avec defaults pour robustesse
+        classe.students = parsed.students || classe.students;
+        classe.absences = parsed.absences || {};
+        classe.notes = parsed.notes || [];
+        classe.interros = parsed.interros || [];
+        classe.devoirs = parsed.devoirs || [];
+    } catch (e) {
+        console.error("Erreur lecture stockage, réinitialisation.", e);
+    }
+}
+
+function persist() {
+    localStorage.setItem("classData_mobile_v2", JSON.stringify(classe));
+    let s = document.getElementById("saved");
+    s.style.display = "block";
+    setTimeout(() => s.style.display = "none", 1500);
+}
+
+/* -------------------------
+   Navigation onglets
+--------------------------*/
+function showPage(n) {
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("activePage"));
+
+    document.querySelectorAll("#tabs button")[n-1].classList.add("active");
+    document.getElementById("page" + n).classList.add("activePage");
+
+    // actions à l'ouverture
+    if (n === 2) {
+        afficherResume();
+        renderNotesTable();
+        renderInterrosTable();
+        renderDevoirsTable();
+    } else if (n === 3) {
+        renderInterroList();
+    } else if (n === 4) {
+        renderDevoirList();
+    }
+}
+
+/* -------------------------
+   CHARGEMENT CRÉNEAU
+--------------------------*/
+function loadAttendance() {
+    let date = dateSel.value;
+    let h1 = heureDebut.value;
+    let h2 = heureFin.value;
+    let mat = matiere.value;
+
+    if (!date || !h1 || !h2) return alert("Tu dois choisir date + heures.");
+
+    let key = `${date}_${h1}-${h2}_${mat}`;
+    if (!classe.absences[key]) classe.absences[key] = [];
+
+    renderTable(key);
+}
+
+/* -------------------------
+   Affichage tableau élèves (Gestion)
+   Colonne Supprimer remplacée par +
+--------------------------*/
+function renderTable(key) {
+    let table = document.getElementById("studentsTable");
+    let abs = classe.absences[key] || [];
+
+    let html = `
+        <tr>
+            <th>Élève</th>
+            <th>Absent</th>
+            <th>+</th>
+        </tr>
+    `;
+
+    classe.students.forEach((name, i) => {
+        let checked = abs.includes(i+1) ? "checked" : "";
+        html += `
+            <tr>
+                <td>${escapeHtml(name)}</td>
+                <td><input type="checkbox" ${checked} onclick="toggleAbsence('${key}', ${i+1})"></td>
+                <td><button class="plus-btn" onclick="addNoteFor(${i})">+</button></td>
+            </tr>
+        `;
+    });
+
+    table.innerHTML = html;
+}
+
+/* -------------------------
+   Toggle absence
+--------------------------*/
+function toggleAbsence(key, id) {
+    if (!classe.absences[key]) classe.absences[key] = [];
+    let abs = classe.absences[key];
+    if (abs.includes(id)) abs.splice(abs.indexOf(id), 1);
+    else abs.push(id);
+    persist();
+}
+
+/* -------------------------
+   Tout cocher (absents)
+--------------------------*/
+function markAll() {
+    let date = dateSel.value;
+    let h1 = heureDebut.value;
+    let h2 = heureFin.value;
+    let mat = matiere.value;
+
+    if (!date || !h1 || !h2) return alert("Choisis la date + heures.");
+
+    let key = `${date}_${h1}-${h2}_${mat}`;
+    classe.absences[key] = classe.students.map((s, i) => i+1);
+
+    renderTable(key);
+    persist();
+}
+
+/* -------------------------
+   Ajouter note (gestion : bouton + par élève)
+   Enregistre dans classe.notes
+--------------------------*/
+function addNoteFor(studentIndex) {
+    let dateSeance = dateSel.value;
+    let heureDebutVal = heureDebut.value;
+    let heureFinVal = heureFin.value;
+    let mat = matiere.value;
+
+    if (!dateSeance || !heureDebutVal || !heureFinVal) {
+        return alert("Avant d'ajouter une note, choisis la date et les heures de la séance.");
+    }
+
+    let note = prompt("Entre la note pour " + classe.students[studentIndex] + " :");
+    if (note === null || note.trim() === "") return;
+
+    let now = new Date();
+    let obj = {
+        studentIndex: studentIndex,
+        nom: classe.students[studentIndex],
+        matiere: mat,
+        dateSeance: dateSeance,
+        heureSeance: `${heureDebutVal}-${heureFinVal}`,
+        noteValue: note,
+        addedAt: now.toLocaleString()
+    };
+
+    classe.notes.push(obj);
+    persist();
+    renderNotesTable();
+    alert("Note ajoutée pour " + obj.nom);
+}
+
+/* -------------------------
+   Rendu tableau des notes (page Résumé)
+--------------------------*/
+function renderNotesTable() {
+    let tbody = document.querySelector("#tableNotes tbody");
+    tbody.innerHTML = "";
+
+    if (!classe.notes || classe.notes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><i>Aucune note enregistrée.</i></td></tr>`;
+        return;
+    }
+
+    classe.notes.forEach(n => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${escapeHtml(n.nom)}</td>
+            <td>${escapeHtml(n.matiere)}</td>
+            <td>${escapeHtml(n.noteValue)}</td>
+            <td>${escapeHtml(n.dateSeance)}</td>
+            <td>${escapeHtml(n.heureSeance)}</td>
+            <td>${escapeHtml(n.addedAt)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/* -------------------------
+   Résumé absences (inchangé mais enrichi)
+--------------------------*/
+function afficherResume() {
+    let zone = document.getElementById("resume");
+    zone.innerHTML = "";
+
+    if (Object.keys(classe.absences).length === 0) {
+        zone.innerHTML = "<p>Aucune absence enregistrée.</p>";
+        return;
+    }
+
+    let dates = {};
+
+    for (let key in classe.absences) {
+        let parts = key.split("_");
+        let date = parts[0];
+        let hours = parts[1];
+        let mat = parts[2];
+
+        if (!dates[date]) dates[date] = [];
+        dates[date].push({ hours, mat, eleves: classe.absences[key] });
+    }
+
+    for (let d in dates) {
+        let block = document.createElement("div");
+        block.className = "block";
+
+        block.innerHTML += `<div class='date-title'>📅 ${d}</div>`;
+
+        dates[d].forEach(info => {
+            let list = info.eleves.map(id => classe.students[id - 1]).join(", ");
+
+            block.innerHTML += `
+                <div class="hour-title">⏰ ${info.hours}</div>
+                <div class="matiere">📘 ${info.mat}</div>
+                <div class="student-list">${list || "<i>Aucun</i>"}</div>
+                <hr>
+            `;
+        });
+
+        zone.appendChild(block);
+    }
+}
+
+/* -------------------------
+   Utilitaires d'échappement
+--------------------------*/
+function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+}
+
+/* -------------------------
+   INTERROGATIONS : rendu liste complète (Option 2)
+   Chaque ligne : nom | input texte note | bouton Ajouter
+   + bouton "Ajouter tous remplis"
+--------------------------*/
+function renderInterroList() {
+    let tbody = document.querySelector("#interroList tbody");
+    tbody.innerHTML = "";
+    classe.students.forEach((name, i) => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="text-align:left;padding-left:12px;">${escapeHtml(name)}</td>
+            <td><input id="interro_note_${i}" class="small-input" placeholder="Ex: 12/20 ou 14"></td>
+            <td>
+                <button class="btn-blue mini-btn" onclick="addSingleInterro(${i})">Ajouter</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/* Ajouter une seule interro */
+function addSingleInterro(i) {
+    let mat = document.getElementById("interroMatiere").value.trim();
+    let dateSeance = document.getElementById("interroDate").value;
+    let hd = document.getElementById("interroHeureDebut").value;
+    let hf = document.getElementById("interroHeureFin").value;
+
+    if (!dateSeance || !hd || !hf) return alert("Choisis date + heure pour la séance d'interrogation.");
+
+    let val = document.getElementById(`interro_note_${i}`).value.trim();
+    if (!val) return alert("Entre une note avant d'ajouter.");
+
+    let now = new Date();
+    let obj = {
+        studentIndex: i,
+        nom: classe.students[i],
+        matiere: mat || "",
+        dateSeance: dateSeance,
+        heureSeance: `${hd}-${hf}`,
+        noteValue: val,
+        addedAt: now.toLocaleString()
+    };
+    classe.interros.push(obj);
+    persist();
+    renderInterroList();
+    renderInterrosTable();
+}
+
+/* Ajouter tous les champs remplis */
+function addAllInterro() {
+    let mat = document.getElementById("interroMatiere").value.trim();
+    let dateSeance = document.getElementById("interroDate").value;
+    let hd = document.getElementById("interroHeureDebut").value;
+    let hf = document.getElementById("interroHeureFin").value;
+
+    if (!dateSeance || !hd || !hf) return alert("Choisis date + heure pour la séance d'interrogation.");
+
+    let count = 0;
+    let now = new Date();
+    classe.students.forEach((s, i) => {
+        let val = document.getElementById(`interro_note_${i}`).value.trim();
+        if (val) {
+            let obj = {
+                studentIndex: i,
+                nom: s,
+                matiere: mat || "",
+                dateSeance: dateSeance,
+                heureSeance: `${hd}-${hf}`,
+                noteValue: val,
+                addedAt: now.toLocaleString()
+            };
+            classe.interros.push(obj);
+            count++;
+            document.getElementById(`interro_note_${i}`).value = "";
+        }
+    });
+    if (count === 0) return alert("Aucune note remplie à ajouter.");
+    persist();
+    renderInterroList();
+    renderInterrosTable();
+    alert(count + " note(s) d'interrogation ajoutée(s).");
+}
+
+/* Rendu tableau interros (Résumé) */
+function renderInterrosTable() {
+    let tbody = document.querySelector("#tableInterros tbody");
+    tbody.innerHTML = "";
+    if (!classe.interros || classe.interros.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><i>Aucune interrogation enregistrée.</i></td></tr>`;
+        return;
+    }
+    classe.interros.forEach(n => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${escapeHtml(n.nom)}</td>
+            <td>${escapeHtml(n.matiere)}</td>
+            <td>${escapeHtml(n.noteValue)}</td>
+            <td>${escapeHtml(n.dateSeance)}</td>
+            <td>${escapeHtml(n.heureSeance)}</td>
+            <td>${escapeHtml(n.addedAt)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/* -------------------------
+   DEVOIRS : logique identique à Interros
+--------------------------*/
+function renderDevoirList() {
+    let tbody = document.querySelector("#devoirList tbody");
+    tbody.innerHTML = "";
+    classe.students.forEach((name, i) => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="text-align:left;padding-left:12px;">${escapeHtml(name)}</td>
+            <td><input id="devoir_note_${i}" class="small-input" placeholder="Ex: 12/20 ou 14"></td>
+            <td>
+                <button class="btn-blue mini-btn" onclick="addSingleDevoir(${i})">Ajouter</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addSingleDevoir(i) {
+    let mat = document.getElementById("devoirMatiere").value.trim();
+    let dateSeance = document.getElementById("devoirDate").value;
+    let hd = document.getElementById("devoirHeureDebut").value;
+    let hf = document.getElementById("devoirHeureFin").value;
+
+    if (!dateSeance || !hd || !hf) return alert("Choisis date + heure pour la séance de devoir.");
+
+    let val = document.getElementById(`devoir_note_${i}`).value.trim();
+    if (!val) return alert("Entre une note avant d'ajouter.");
+
+    let now = new Date();
+    let obj = {
+        studentIndex: i,
+        nom: classe.students[i],
+        matiere: mat || "",
+        dateSeance: dateSeance,
+        heureSeance: `${hd}-${hf}`,
+        noteValue: val,
+        addedAt: now.toLocaleString()
+    };
+    classe.devoirs.push(obj);
+    persist();
+    renderDevoirList();
+    renderDevoirsTable();
+}
+
+function addAllDevoir() {
+    let mat = document.getElementById("devoirMatiere").value.trim();
+    let dateSeance = document.getElementById("devoirDate").value;
+    let hd = document.getElementById("devoirHeureDebut").value;
+    let hf = document.getElementById("devoirHeureFin").value;
+
+    if (!dateSeance || !hd || !hf) return alert("Choisis date + heure pour la séance de devoir.");
+
+    let count = 0;
+    let now = new Date();
+    classe.students.forEach((s, i) => {
+        let val = document.getElementById(`devoir_note_${i}`).value.trim();
+        if (val) {
+            let obj = {
+                studentIndex: i,
+                nom: s,
+                matiere: mat || "",
+                dateSeance: dateSeance,
+                heureSeance: `${hd}-${hf}`,
+                noteValue: val,
+                addedAt: now.toLocaleString()
+            };
+            classe.devoirs.push(obj);
+            count++;
+            document.getElementById(`devoir_note_${i}`).value = "";
+        }
+    });
+    if (count === 0) return alert("Aucune note remplie à ajouter.");
+    persist();
+    renderDevoirList();
+    renderDevoirsTable();
+    alert(count + " note(s) de devoir ajoutée(s).");
+}
+
+function renderDevoirsTable() {
+    let tbody = document.querySelector("#tableDevoirs tbody");
+    tbody.innerHTML = "";
+    if (!classe.devoirs || classe.devoirs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><i>Aucun devoir enregistré.</i></td></tr>`;
+        return;
+    }
+    classe.devoirs.forEach(n => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${escapeHtml(n.nom)}</td>
+            <td>${escapeHtml(n.matiere)}</td>
+            <td>${escapeHtml(n.noteValue)}</td>
+            <td>${escapeHtml(n.dateSeance)}</td>
+            <td>${escapeHtml(n.heureSeance)}</td>
+            <td>${escapeHtml(n.addedAt)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/* -------------------------
+   Export PDF pour chaque tableau
+   Utilise jsPDF + autotable (CDN inclus plus bas)
+--------------------------*/
+function downloadTableAsPDF(tableSelector, title, filename) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+
+    doc.setFontSize(11);
+    doc.text("Généré le : " + new Date().toLocaleString(), 14, 28);
+
+    doc.autoTable({
+        html: tableSelector,
+        startY: 35,
+        theme: 'striped',
+        styles: { fontSize: 10 }
+    });
+
+    doc.save(filename);
+}
+
+document.getElementById("downloadPDF").addEventListener("click", function () {
+    downloadTableAsPDF('#tableNotes', 'Résumé des Notes générales', 'notes_generales.pdf');
+});
+document.getElementById("downloadInterrosPDF").addEventListener("click", function () {
+    downloadTableAsPDF('#tableInterros', 'Résumé des Interrogations', 'interrogations.pdf');
+});
+document.getElementById("downloadDevoirsPDF").addEventListener("click", function () {
+    downloadTableAsPDF('#tableDevoirs', 'Résumé des Devoirs', 'devoirs.pdf');
+});
+
+/* -------------------------
+   Initial render si présence dans le stockage
+--------------------------*/
+window.addEventListener("load", function() {
+    // initial render minimal
+    renderNotesTable();
+    renderInterrosTable();
+    renderDevoirsTable();
+    // prepare lists (they render on opening their tabs too)
+    renderInterroList();
+    renderDevoirList();
+});
+</script>
+
+<!-- libs pour pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+</body>
+</html>
